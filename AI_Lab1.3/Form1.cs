@@ -71,7 +71,7 @@ public partial class Form1 : Form
         this.Close();
     }
 
-    // Load folder of jpegs
+    // Load folder of Jpegs
     private void button2_Click(object sender, EventArgs e)
     {
         using (var fbd = new FolderBrowserDialog())
