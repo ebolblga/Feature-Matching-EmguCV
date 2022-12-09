@@ -1,5 +1,7 @@
 ﻿namespace AI_Lab1._3;
 
+using AForge.Video;
+using AForge.Video.DirectShow;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Features2D;
@@ -9,6 +11,9 @@ using Emgu.CV.Util;
 public partial class Form1 : Form
 {
     List<Image<Gray, byte>> SearchImages = new List<Image<Gray, byte>>();
+    private FilterInfoCollection camList;
+    private VideoCaptureDevice device;
+
     public Form1()
     {
         this.InitializeComponent();
@@ -21,7 +26,7 @@ public partial class Form1 : Form
         {
             if (SearchImages.Count < 1)
             {
-                MessageBox.Show("Select a serach folder", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Select a search folder", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
             using (OpenFileDialog ofd = new OpenFileDialog() { Multiselect = false, Filter = "Image Files (*.jpg;*.png;*.bmp;)|*.jpg;*.png;*.bmp;|All Files (*.*)|*.*;" })
@@ -46,7 +51,7 @@ public partial class Form1 : Form
 
                     if (vp != null)
                     {
-                        // CvInvoke.Polylines(SearchImages[maxIndex], vp.Item1, true, new MCvScalar(0, 0, 255), 5);
+                        CvInvoke.Polylines(SearchImages[maxIndex], vp.Item1, true, new MCvScalar(0, 0, 255), 5);
                     }
                     else
                     {
@@ -157,5 +162,132 @@ public partial class Form1 : Form
         {
             throw new Exception(ex.Message);
         }
+    }
+
+    // Turns on camera
+    private void button3_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            if (SearchImages.Count < 1)
+            {
+                throw new Exception("Select a search folder");
+            }
+            if (camList == null)
+            {
+                throw new Exception("No available cameras.");
+            }
+            else if (camList.Count == 0)
+            {
+                throw new Exception("No available cameras.");
+            }
+            else if (comboBox1.SelectedIndex == null)
+            {
+                throw new Exception("Camera is not selected.");
+            }
+            else
+            {
+                device = new VideoCaptureDevice(camList[comboBox1.SelectedIndex].MonikerString);
+                device.NewFrame += Capture_ImageGrabbed;
+                device.Start();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    // Stops capturing process
+    private void button4_Click(object sender, EventArgs e)
+    {
+        stopCam();
+    }
+
+    // Stops capturing process
+    private void stopCam()
+    {
+        if (device != null)
+        {
+            if (device.IsRunning)
+            {
+                device.SignalToStop();
+                device = null;
+            }
+        }
+    }
+
+    // Camera settings
+    private void Capture_ImageGrabbed(object sender, NewFrameEventArgs eventArgs)
+    {
+        try
+        {
+            Image<Bgr, byte> inputImage = eventArgs.Frame.ToImage<Bgr, byte>();
+
+
+
+            int maxIndex = 0;
+            int maxCount = 0;
+
+            for (int i = 0; i < SearchImages.Count - 1; i++)
+            {
+                Tuple<VectorOfPoint, int> tmp = ProcessImage(SearchImages[i], inputImage.Convert<Gray, byte>());
+                if (tmp.Item2 > maxCount)
+                {
+                    maxIndex = i;
+                    maxCount = tmp.Item2;
+                }
+            }
+
+            Tuple<VectorOfPoint, int> vp = ProcessImage(SearchImages[maxIndex], inputImage.Convert<Gray, byte>());
+
+            if (vp != null)
+            {
+                //CvInvoke.Polylines(SearchImages[maxIndex], vp.Item1, true, new MCvScalar(0, 0, 255), 5);
+                
+            }
+            if (maxCount > 4)
+            {
+                pictureBox2.Image = SearchImages[maxIndex].AsBitmap();
+            }
+
+
+
+            pictureBox1.Image = inputImage.ToBitmap();
+            inputImage.Dispose();
+        }
+        catch (Exception ex)
+        {
+            //MessageBox.Show(ex.Message, "Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    // Stops cam on form close
+    private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+    {
+        stopCam();
+    }
+
+    // Loads available cameras
+    private void Form1_Load(object sender, EventArgs e)
+    {
+        //cams = DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
+        camList = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+
+        foreach (FilterInfo device in camList)
+        {
+            comboBox1.Items.Add(device.Name);
+        }
+
+        if (camList.Count >= 2)
+        {
+            comboBox1.SelectedIndex = camList.Count - 1;
+        }
+        else
+        {
+            comboBox1.SelectedIndex = 0;
+        }
+
+        device = new VideoCaptureDevice();
     }
 }
