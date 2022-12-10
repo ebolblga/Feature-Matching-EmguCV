@@ -19,7 +19,7 @@ public partial class Form1 : Form
         this.InitializeComponent();
     }
 
-    // Feature matching two images
+    // Feature matching for two images
     private void button1_Click(object sender, EventArgs e)
     {
         try
@@ -51,7 +51,7 @@ public partial class Form1 : Form
 
                     if (vp != null)
                     {
-                        CvInvoke.Polylines(SearchImages[maxIndex], vp.Item1, true, new MCvScalar(0, 0, 255), 5);
+                        //CvInvoke.Polylines(SearchImages[maxIndex], vp.Item1, true, new MCvScalar(0, 0, 255), 5);
                     }
                     else
                     {
@@ -73,6 +73,7 @@ public partial class Form1 : Form
     // Exit button
     private void exitToolStripMenuItem_Click(object sender, EventArgs e)
     {
+        stopCam();
         this.Close();
     }
 
@@ -155,6 +156,12 @@ public partial class Form1 : Form
                 finalPoints = new VectorOfPoint(points);
             }
 
+            // Draws found features
+            //MCvScalar bgrMatchingLinesColor = new MCvScalar(255, 0, 0);
+            //MCvScalar bgrKeyPointsColor = new MCvScalar(0, 255, 0);
+            //Image<Bgr, Byte> outputImg = inputImg.Convert<Bgr, byte>().Copy();
+            //outputImg = Features2DToolbox.DrawMatches(inputImg, inputImgKeyPoints, matchImg, matchImgKeyPoints, matches, outputImg, bgrMatchingLinesColor, bgrKeyPointsColor, mask, Features2DToolbox.KeypointDrawType.Default);
+
             //return Tuple<VectorOfPoint?, int?>(finalPoints, matchCount);
             return Tuple.Create(finalPoints, matchCount);
         }
@@ -198,33 +205,12 @@ public partial class Form1 : Form
         }
     }
 
-    // Stops capturing process
-    private void button4_Click(object sender, EventArgs e)
-    {
-        stopCam();
-    }
-
-    // Stops capturing process
-    private void stopCam()
-    {
-        if (device != null)
-        {
-            if (device.IsRunning)
-            {
-                device.SignalToStop();
-                device = null;
-            }
-        }
-    }
-
-    // Camera settings
+    // Frame processing
     private void Capture_ImageGrabbed(object sender, NewFrameEventArgs eventArgs)
     {
         try
         {
             Image<Bgr, byte> inputImage = eventArgs.Frame.ToImage<Bgr, byte>();
-
-
 
             int maxIndex = 0;
             int maxCount = 0;
@@ -241,17 +227,15 @@ public partial class Form1 : Form
 
             Tuple<VectorOfPoint, int> vp = ProcessImage(SearchImages[maxIndex], inputImage.Convert<Gray, byte>());
 
-            if (vp != null)
+            if (vp.Item1 != null)
             {
                 //CvInvoke.Polylines(SearchImages[maxIndex], vp.Item1, true, new MCvScalar(0, 0, 255), 5);
-                
+                CvInvoke.Polylines(inputImage, vp.Item1, true, new MCvScalar(0, 0, 255), 5);
             }
             if (maxCount > 4)
             {
                 pictureBox2.Image = SearchImages[maxIndex].AsBitmap();
             }
-
-
 
             pictureBox1.Image = inputImage.ToBitmap();
             inputImage.Dispose();
@@ -259,6 +243,25 @@ public partial class Form1 : Form
         catch (Exception ex)
         {
             //MessageBox.Show(ex.Message, "Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    // Stops capturing process
+    private void button4_Click(object sender, EventArgs e)
+    {
+        stopCam();
+    }
+
+    // Stops capturing process
+    private void stopCam()
+    {
+        if (device != null)
+        {
+            if (device.IsRunning)
+            {
+                device.SignalToStop();
+                device = null;
+            }
         }
     }
 
